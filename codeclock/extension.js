@@ -1,22 +1,28 @@
-// The module 'vscode' contains the VS Code extensibility API
 const vscode = require('vscode');
 
-// Variables to track time
 let startTime = null;
 let totalTime = 0;
 let lastActivityTime = Date.now();
+let timerInitialized = false;
+let sessionData = {
+    fileData: {fileA: 0, fileB: 4 }, //time spent in each file in minutes
+    trackingData: {
+    keystrokeCt: 0,
+    undoCt: 0,
+    clickCt: 0,
+    copyCutPasteCt: 0,
+    deleteCt: 0
+  }
+}
+// Idle threshold in milliseconds (can be configured as described earlier)
+const idleThreshold = 600000; //idle time here is 10 minutes
 
-// Idle threshold in milliseconds (currently 30 seconds for testing; adjust as needed)
-const idleThreshold = 30000;
-
-// Start the timer if not already started
 function startTimer() {
   if (!startTime) {
     startTime = Date.now();
   }
 }
 
-// Stop the timer and add elapsed time to totalTime
 function stopTimer() {
   if (startTime) {
     totalTime += Date.now() - startTime;
@@ -24,63 +30,111 @@ function stopTimer() {
   }
 }
 
-// Format milliseconds into "X min Y sec"
 function formatTime(milliseconds) {
   const seconds = Math.floor(milliseconds / 1000);
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins} min ${secs} sec`;
+  const mins = (Math.floor(seconds / 60)) % 60;
+  const hours = Math.floor(mins / 60);
+//   const secs = seconds % 60;
+  return `${hours} hours ${mins} mins`;
 }
 
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
-  console.log('Extension "codeclock" is now active!');
+  vscode.window.onDidChangeActiveTextEditor((editor) => {
+	console.log("Got here");
+	if (editor) {
+	  // Get the full file path
+	  let filePath = editor.document.fileName;
+	  // Optionally, extract just the file name
+    vscode.window.showInformationMessage(`Current file: ${filePath}`);
+	  // Update your variable or state as needed here
+	}
+  });
 
-  // Listen for window focus changes.
-  vscode.window.onDidChangeWindowState((state) => {
-    if (state.focused) {
-      startTimer();
-      // Reset the last activity time when the window is focused
-      lastActivityTime = Date.now();
+  // Command to initialize CodeClock and start the timer.
+  let codeClockCommand = vscode.commands.registerCommand('CodeClock', () => {
+    if (!timerInitialized) {
+      // Listen for window focus changes.
+      context.subscriptions.push(
+        vscode.window.onDidChangeWindowState((state) => {
+          if (state.focused) {
+            startTimer();
+            lastActivityTime = Date.now();
+          } else {
+            stopTimer();
+          }
+        })
+      );
+
+      // Listen for text document changes.
+      context.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument(() => {
+          lastActivityTime = Date.now();
+          if (!startTime && vscode.window.state.focused) {
+            startTimer();
+          }
+        })
+      );
+
+      // Listen for selection changes (e.g., moving the cursor).
+      context.subscriptions.push(
+        vscode.window.onDidChangeTextEditorSelection(() => {
+          lastActivityTime = Date.now();
+          if (!startTime && vscode.window.state.focused) {
+            startTimer();
+          }
+        })
+      );
+
+      // Listen for visible range changes (e.g., scrolling).
+      context.subscriptions.push(
+        vscode.window.onDidChangeTextEditorVisibleRanges(() => {
+          lastActivityTime = Date.now();
+          if (!startTime && vscode.window.state.focused) {
+            startTimer();
+          }
+        })
+      );
+      
+    //   context.subscriptions.push(
+    //     vscode.window.onDidChangeWindowState();
+	// 	let fileName = vscode.window.activeTextEditor.document.fileName;
+    //   )
+
+      // Idle detection: check at a reasonable frequency.
+      const idleCheckInterval = setInterval(() => {
+        if (startTime && (Date.now() - lastActivityTime > idleThreshold)) {
+          stopTimer();
+          vscode.window.setStatusBarMessage("Idle: Timer paused", 3000);
+        }
+      }, 5000);
+      context.subscriptions.push({ dispose: () => clearInterval(idleCheckInterval) });
+
+      timerInitialized = true;
+      vscode.window.showInformationMessage("CodeClock timer started!");
     } else {
-      stopTimer();
+      vscode.window.showInformationMessage("CodeClock timer is already running.");
     }
   });
+  context.subscriptions.push(codeClockCommand);
 
-  // Listen for changes in text documents to detect user activity.
-  vscode.workspace.onDidChangeTextDocument(() => {
-    lastActivityTime = Date.now();
-    // If the window is focused and the timer isn't running, restart it.
-    if (!startTime && vscode.window.state.focused) {
-      startTimer();
-    }
-  });
-
-  // Check for idle time every 5 seconds.
-  const idleCheckInterval = setInterval(() => {
-    if (startTime && (Date.now() - lastActivityTime > idleThreshold)) {
-      stopTimer();
-      vscode.window.setStatusBarMessage("Idle: Timer paused", 3000);
-    }
-  }, 5000);
-  context.subscriptions.push({ dispose: () => clearInterval(idleCheckInterval) });
-
-  // Register a command to show the tracked time.
-  let disposable = vscode.commands.registerCommand('extension.showTime', () => {
-    // Optionally, update timer before showing total time.
-    if (startTime) {
-      stopTimer();
-    }
+  // Command to show the tracked active time.
+  let showTimeCommand = vscode.commands.registerCommand('extension.showTime', () => {
+    if (startTime) stopTimer();
     vscode.window.showInformationMessage(`Total active time: ${formatTime(totalTime)}`);
   });
-  context.subscriptions.push(disposable);
+  context.subscriptions.push(showTimeCommand);
+
+
+  let endTimeCommand = vscode.commands.registerCommand('extension.finishTime', () => {
+    if (startTime) stopTimer();
+    vscode.window.showInformationMessage(`Total Time is: ${formatTime(totalTime)}. Thanks for using CodeClock!`);
+  });
+  context.subscriptions.push(endTimeCommand);
 }
 
-/**
- * This method is called when your extension is deactivated.
- */
 function deactivate() {
   stopTimer();
 }

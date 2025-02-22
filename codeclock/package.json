@@ -10,14 +10,21 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
   ],
   "main": "./extension.js",
   "contributes": {
     "commands": [
       {
+        "command": "CodeClock",
+        "title": "Start CodeClock Timer"
+      },
+      {
         "command": "extension.showTime",
         "title": "Show Active Time"
+      },
+      {
+        "command": "extension.finishTime",
+        "title": "Stop CodeClock Timer"
       }
     ]
   },
