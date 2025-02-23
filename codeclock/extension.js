@@ -21,10 +21,10 @@ let sessionData = {
   trackingData: {
     keystrokeCt: 0,
     undoCt: 0,
-    clickCt: 0,
     copyCutPasteCt: 0,
     deleteCt: 0,
 	numKeyPresses: 0,
+    
     // idle and active time are in milliseconds
     idleTime: 0,
     activeTime: 0
@@ -131,17 +131,64 @@ function activate(context) {
         })
       );
 
+      /***********************************************************************/
+	  /*                       COUNTING USER DATA                            */
+	  /***********************************************************************/
+	  //Measure how many key presses the user does
+	  context.subscriptions.push(
+		vscode.commands.registerCommand('type', async (args) => {
+		  // Increment your keystroke counter
+		  sessionData.trackingData.numKeyPresses++;
+	  
+		  // Forward the key event to the default type command so that text is still inserted
+		  await vscode.commands.executeCommand('default:type', args);
+		})
+	  );
 
-	//   context.subscriptions.push(
-	// 	vscode.commands.registerCommand('type', (args) => {
-	// 		// const outputChannel = vscode.window.createOutputChannel("Test");
-  	// 		// outputChannel.clear();
-  	// 		// outputChannel.appendLine(`Total active time: ${formatTime(sessionData.trackingData.activeTime)}`);
-	// 		sessionData.numKeypresses++;
-	// 	}))
+	  //count number of undos
+	  context.subscriptions.push(
+		vscode.commands.registerCommand('undo', async () => {
+		  sessionData.trackingData.undoCt++;
+		  await vscode.commands.executeCommand('default:undo');
+		})
+	  );
 
 
-      // Idle detection: check at a reasonable frequency.
+	  // count number of copies
+	  context.subscriptions.push(
+	  	vscode.commands.registerCommand('editor.action.clipboardCopyAction', async () => {
+	  	sessionData.trackingData.copyCutPasteCt++;
+	  	await vscode.commands.executeCommand('default:editor.action.clipboardCopyAction');
+	  	})
+	  );
+	  
+	  // count number of cuts
+	  context.subscriptions.push(
+	  	vscode.commands.registerCommand('editor.action.clipboardCutAction', async () => {
+	  	sessionData.trackingData.copyCutPasteCt++;
+	  	await vscode.commands.executeCommand('default:editor.action.clipboardCutAction');
+	  	})
+	  );
+	  
+	  // count the number of pastes
+	  context.subscriptions.push(
+	  	vscode.commands.registerCommand('editor.action.clipboardPasteAction', async () => {
+	  	sessionData.trackingData.copyCutPasteCt++;
+	  	await vscode.commands.executeCommand('default:editor.action.clipboardPasteAction');
+	  	})
+	  );
+  
+      // count the number of deletes (deleteLeft only for now)
+    //   context.subscriptions.push(
+    //     vscode.commands.registerCommand('deleteLeft', async (args) => {
+    //       sessionData.trackingData.deleteCt++;
+    //       await vscode.commands.executeCommand('default:deleteLeft', args);
+    //     })
+    //   );
+      
+
+
+      //check for idle detection which triggers after a minute of no behavior
       const idleCheckInterval = setInterval(() => {
         if (startTime && (Date.now() - lastRecordedTime > idleThreshold)) {
           stopTimer();
@@ -151,8 +198,10 @@ function activate(context) {
       context.subscriptions.push({ dispose: () => clearInterval(idleCheckInterval) });
 
       timerInitialized = true;
+      //print message when timer starts
       vscode.window.showInformationMessage("CodeClock timer started!");
     } else {
+      //if timer is already started, print a different message
       vscode.window.showInformationMessage("CodeClock timer is already running.");
     }
   });
@@ -171,19 +220,12 @@ function activate(context) {
 // Create an output channel (usually at the top of your activate function)
   const outputChannel = vscode.window.createOutputChannel("CodeClock");
 
-// When you need to display your message:
-//   outputChannel.clear();
-//   outputChannel.appendLine(`Total active time: ${formatTime(sessionData.trackingData.activeTime)}`);
-//   outputChannel.appendLine(`Total idle time: ${formatTime(sessionData.trackingData.idleTime)}`);
-//   outputChannel.appendLine(`Total time spent: ${formatTime(sessionData.trackingData.activeTime + sessionData.trackingData.idleTime)}`);
-//   outputChannel.show();
-
-
-
   let endTimeCommand = vscode.commands.registerCommand('extension.finishTime', () => {
     if (startTime) stopTimer();
     vscode.window.showInformationMessage(`Total time spent: ${formatTime(sessionData.trackingData.activeTime + sessionData.trackingData.idleTime)}\n
-										  Num key presses: ${sessionData.numKeypresses}\n
+										  Num key presses: ${sessionData.trackingData.numKeyPresses}\n
+                                          Num undo: ${sessionData.trackingData.undoCt}\n
+                                          Num copy/cut/paste: ${sessionData.trackingData.copyCutPasteCt}\n
 										  Thanks for using CodeClock!`);
   });
   context.subscriptions.push(endTimeCommand);
