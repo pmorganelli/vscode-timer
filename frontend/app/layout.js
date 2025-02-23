@@ -11,6 +11,7 @@ import {
 	SignedOut,
 	UserButton,
 } from "@clerk/nextjs";
+const clerkFrontend = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const geistSans = Geist({
 	variable: "--font-geist-sans",
 	subsets: ["latin"],
@@ -23,7 +24,7 @@ const geistMono = Geist_Mono({
 
 export default function RootLayout({ children }) {
 	return (
-		<ClerkProvider>
+		<ClerkProvider frontendApi={clerkFrontend}>
 			<html lang="en">
 				<body
 					className={`${geistSans.variable} ${geistMono.variable} antialiased`}
