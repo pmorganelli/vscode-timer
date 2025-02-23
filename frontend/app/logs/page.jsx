@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import LogRows from "../logsRow/logsRow"; 
+import LogRows from "../logRow/logsRow"; 
 
 export default function LogsPage() {
   const [logs, setLogs] = useState([
