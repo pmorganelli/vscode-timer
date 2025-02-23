@@ -1,6 +1,7 @@
 // pages/welcome.js
 "use client";
 import Link from "next/link";
+import LoginButton from "./components/LoginButton";
 export default function Welcome() {
 	let link = "/profile";
 
@@ -19,9 +20,8 @@ export default function Welcome() {
 			) : (
 				<Link
 					href={link}
-					className="px-4 py-2 bg-blue-900 text-white font-semibold rounded-full shadow-lg hover:bg-blue-800 transition-colors duration-300"
 				>
-					My Profile
+					<LoginButton></LoginButton>
 				</Link>
 			)}
 		</div>

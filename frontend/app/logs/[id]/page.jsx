@@ -20,7 +20,7 @@ export default async function LogSessionPage({ params }) {
 
   // Testing Data (remove when API is ready)
   const session = {
-    user_id: "TestUser123",
+    user_id: "Harrison Tun",
     time_statistics: {
       start_time: new Date(),
       session_duration_minutes: 120,
@@ -42,7 +42,7 @@ export default async function LogSessionPage({ params }) {
   return (
     <div className="min-h-screen bg-white flex flex-col items-center p-8">
       <h1 className="text-4xl font-bold text-blue-800 mb-8">
-        {session.user_id} Session: {id}
+        {session.user_id}'s Session: #{id}
       </h1>
       <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 w-full max-w-3xl border border-blue-800">
         {/* User Information */}
