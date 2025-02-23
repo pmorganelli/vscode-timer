@@ -1,5 +1,5 @@
 "use client";
-import Rows from "../Rows/rows";
+import Rows from "../rows/rows";
 import {useState} from "react"
 export default function Leaderboard() {
     const [leaderboardData, setLeaderboardData] = useState([]);

@@ -1,3 +1,4 @@
+"use client"
 import Link from "next/link";
 
 export default function Welcome() {
@@ -7,7 +8,7 @@ export default function Welcome() {
         Welcome to CodeClock!
       </h1>
       <Link
-        href="/Leaderboard"
+        href="/leaderboard"
         className="px-8 py-4 bg-blue-900 text-white font-semibold rounded-full shadow-lg hover:bg-blue-800 transition-colors duration-300"
       >
         View Leaderboard
@@ -15,7 +16,7 @@ export default function Welcome() {
       <br>
       </br>
        <Link
-          href="/Logs"
+          href="/logs"
           className="px-8 py-4 bg-blue-900 text-white font-semibold rounded-full shadow-lg hover:bg-blue-800 transition-colors duration-300"
         >
           View Logs
