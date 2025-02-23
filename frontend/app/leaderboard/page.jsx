@@ -10,19 +10,17 @@ export default function Leaderboard() {
     { id: "3", name: "Charlie", timeSpent: "180" },
   ]);
 
-  // Sort in descending order (highest timeSpent gets rank 1)
+  // Sort in descending order so the user with the highest timeSpent is ranked first.
   const sortedData = leaderboardData.slice().sort((a, b) => {
-    const timeA = parseInt(a.timeSpent);
-    const timeB = parseInt(b.timeSpent);
-    return timeB - timeA;
+    return parseInt(b.timeSpent) - parseInt(a.timeSpent);
   });
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center p-8">
-      <h1 className="text-4xl font-bold text-blue-800 mb-8">Leaderboard</h1>
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-8">
+      <h1 className="text-4xl font-bold text-gray-800 mb-8">Leaderboard</h1>
       <div className="overflow-x-auto w-full max-w-4xl">
-        <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden border border-blue-800">
-          <thead className="bg-blue-800">
+        <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+          <thead className="bg-blue-500">
             <tr>
               <th className="px-6 py-3 text-left text-white font-bold">Rank</th>
               <th className="px-6 py-3 text-left text-white font-bold">Name</th>
