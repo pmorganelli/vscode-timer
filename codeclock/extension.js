@@ -1,6 +1,6 @@
 /* 
  * extension.js
- * Made by: Peter Morganelli with help from ChatGPT
+ * Made by: Peter Morganelli and Brendan Roy with help from ChatGPT
  * 2/22/25
  * Purpose: Define the functionality for a VSCode extension called CodeClock
  *          for the JumboHack 2025 Hackathon. Upon entering "Start CodeClock Timer"
