@@ -202,8 +202,8 @@ function activate(context) {
   let showTimeCommand = vscode.commands.registerCommand('extension.showTime', () => {
     if (!doOver) {
         stopTimer();
-        vscode.window.showInformationMessage(`Active: ${formatTime(sessionData.trackingData.activeTime)}\n
-          								  Idle: ${formatTime(sessionData.trackingData.idleTime)}\n
+        vscode.window.showInformationMessage(`Active: ${formatTime(sessionData.trackingData.activeTime)}. \n
+          								  Idle: ${formatTime(sessionData.trackingData.idleTime)}. \n
       									  Total: ${formatTime(sessionData.trackingData.activeTime + sessionData.trackingData.idleTime)}`);
     } else {
         vscode.window.showInformationMessage(`There is no CodeClock timer running.`);
@@ -218,9 +218,9 @@ function activate(context) {
   let endTimeCommand = vscode.commands.registerCommand('extension.finishTime', () => {
     if (!doOver) {
         stopTimer();
-        vscode.window.showInformationMessage(`Total time spent: ${formatTime(sessionData.trackingData.activeTime + sessionData.trackingData.idleTime)}\n
-										  Key presses: ${sessionData.trackingData.numKeyPresses}\n
-                                          Undos: ${sessionData.trackingData.undoCt}\n
+        vscode.window.showInformationMessage(`Total time spent: ${formatTime(sessionData.trackingData.activeTime + sessionData.trackingData.idleTime)}. \n
+										  Key presses: ${sessionData.trackingData.numKeyPresses}. \n
+                                          Undos: ${sessionData.trackingData.undoCt}. \n
 										  Thanks for using CodeClock!`);
         deactivate();
     } else {
