@@ -17,31 +17,44 @@ let startTime = null;
 let lastRecordedTime = Date.now();
 let timerInitialized = false;
 let email = "";
-let doOver = false;
+let doOver = true;
 let sessionData = {
   fileData: { fileA: 0, fileB: 4 }, // time spent in each file in minutes
   trackingData: {
     keystrokeCt: 0,
     undoCt: 0,
     numKeyPresses: 0,
-    
+    pasteCount: 0,
+
     // idle and active time are in milliseconds
     idleTime: 0,
-    activeTime: 0
-
+    activeTime: 0,
+    offCodeTime: 0
   }
 };
+// Off vscode time that still counts toward idle time (maximum is 20 minutes)
+const maxOffCode = 12000
 // Idle threshold in milliseconds (idle time here is 1 minute)
 const idleThreshold = 60000;
 let totalTime = 0;
 
 function startTimer() {
+  if (sessionData.trackingData.offCodeTime) {
+    let timeOff = Date.now() - sessionData.trackingData.offCodeTime;
+    console.log(`TIMEOFF: ${timeOff}`);
+    sessionData.trackingData.idleTime += (timeOff > maxOffCode) ? maxOffCode : timeOff;
+    sessionData.trackingData.offCodeTime = 0;
+  }
+
   if (!startTime) {
     startTime = Date.now();
   }
   lastRecordedTime = startTime;
 }
+function startOffCodeTimer() {
+  sessionData.trackingData.offCodeTime = Date.now();
 
+}
 function stopTimer() {
   if (startTime) {
     totalTime += Date.now() - startTime;
@@ -57,10 +70,12 @@ function formatTime(milliseconds) {
 }
 
 function recordActivity() {
+
   const currTime = Date.now();
   const delta = currTime - lastRecordedTime;
   if (delta > idleThreshold) {
-    sessionData.trackingData.idleTime += delta;
+    sessionData.trackingData.idleTime += (delta - idleThreshold);
+    sessionData.trackingData.activeTime += idleThreshold;
     console.log(`Recorded idle time: ${delta} ms`);
   } else {
     sessionData.trackingData.activeTime += delta;
@@ -84,34 +99,36 @@ function activate(context) {
       let fileName = path.basename(filePath);
       vscode.window.showInformationMessage(`Current file: ${fileName}`);
     }
-});
-    
+  });
+
 
   vscode.window.showInputBox({
-        prompt: "Enter your email address; data will not be recorded without a valid email",
-        validateInput: (value) => {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                return emailRegex.test(value) ? null : "Please enter a valid email address";
-        }
+    prompt: "Enter your email address; data will not be recorded without a valid email",
+    validateInput: (value) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(value) ? null : "Please enter a valid email address";
+    }
   }).then((value) => {
-        if (value) {
-                let email = value;
-                console.log(`yo check out the email: ${email}`);
-        }
+    if (value) {
+      let email = value;
+      console.log(`yo check out the email: ${email}`);
+    }
   })
 
   // Command to initialize CodeClock and start the timer.
   let codeClockCommand = vscode.commands.registerCommand('CodeClock', () => {
-    if (!timerInitialized) {
+    if (!timerInitialized || !doOver) {
+      doOver = false;
       // Listen for window focus changes.
       context.subscriptions.push(
         vscode.window.onDidChangeWindowState((state) => {
           if (state.focused) {
             startTimer();
-            recordActivity();
             lastRecordedTime = Date.now();
+            recordActivity();
           } else {
-            stopTimer();
+            console.log(`WE HAVE STARTED`);
+            startOffCodeTimer();
           }
         })
       );
@@ -150,27 +167,45 @@ function activate(context) {
       );
 
       /***********************************************************************/
-	  /*                       COUNTING USER DATA                            */
-	  /***********************************************************************/
-	  //Measure how many key presses the user does
-	  context.subscriptions.push(
-		vscode.commands.registerCommand('type', async (args) => {
-		  // Increment your keystroke counter
-		  sessionData.trackingData.numKeyPresses++;
-	  
-		  // Forward the key event to the default type command so that text is still inserted
-		  await vscode.commands.executeCommand('default:type', args);
-		})
-	  );
+      /*                       COUNTING USER DATA                            */
+      /***********************************************************************/
+      //Measure how many key presses the user does
+      context.subscriptions.push(
+        vscode.commands.registerCommand('type', async (args) => {
+          // Increment your keystroke counter
+          sessionData.trackingData.numKeyPresses++;
 
-	  //count number of undos
-	  context.subscriptions.push(
-		vscode.commands.registerCommand('undo', async () => {
-		  sessionData.trackingData.undoCt++;
-		  await vscode.commands.executeCommand('default:undo');
-		})
-	  );
-      
+          // Forward the key event to the default type command so that text is still inserted
+          await vscode.commands.executeCommand('default:type', args);
+        })
+      );
+
+      //count number of undos
+      context.subscriptions.push(
+        vscode.commands.registerCommand('undo', async () => {
+          sessionData.trackingData.undoCt++;
+          await vscode.commands.executeCommand('default:undo');
+        })
+      );
+
+      context.subscriptions.push(
+        vscode.commands.registerCommand('extension.trackPaste', async () => {
+
+          // context.globalState.update('pasteCount', sessionData.trackingData.pasteCount);
+          // Execute the real paste command
+          await vscode.commands.executeCommand('editor.action.clipboardPasteAction');
+        })
+      );
+
+      // Bind our tracking commands to the real ones
+      context.subscriptions.push(
+        vscode.commands.registerCommand('default:editor.action.clipboardPasteAction', () => {
+          sessionData.trackingData.pasteCount = 100;
+          console.log(`Pastecount: ${sessionData.trackingData.pasteCount}`);
+          vscode.commands.executeCommand('extension.trackCopy');
+        })
+      );
+
 
       //check for idle detection which triggers after a minute of no behavior
       const idleCheckInterval = setInterval(() => {
@@ -193,7 +228,7 @@ function activate(context) {
         doOver = false;
         vscode.window.showInformationMessage("CodeClock timer started!");
       }
-      
+
     }
   });
   context.subscriptions.push(codeClockCommand);
@@ -201,47 +236,48 @@ function activate(context) {
   // Command to show the tracked active time.
   let showTimeCommand = vscode.commands.registerCommand('extension.showTime', () => {
     if (!doOver) {
-        stopTimer();
-        vscode.window.showInformationMessage(`Active: ${formatTime(sessionData.trackingData.activeTime)}. \n
+      recordActivity();
+      // stopTimer();
+      vscode.window.showInformationMessage(`Active: ${formatTime(sessionData.trackingData.activeTime)}. \n
           								  Idle: ${formatTime(sessionData.trackingData.idleTime)}. \n
       									  Total: ${formatTime(sessionData.trackingData.activeTime + sessionData.trackingData.idleTime)}`);
     } else {
-        vscode.window.showInformationMessage(`There is no CodeClock timer running.`);
+      vscode.window.showInformationMessage(`There is no CodeClock timer running.`);
     }
   });
   context.subscriptions.push(showTimeCommand);
 
 
-// Create an output channel (usually at the top of your activate function)
+  // Create an output channel (usually at the top of your activate function)
   const outputChannel = vscode.window.createOutputChannel("CodeClock");
 
   let endTimeCommand = vscode.commands.registerCommand('extension.finishTime', () => {
     if (!doOver) {
-        stopTimer();
-        vscode.window.showInformationMessage(`Total time spent: ${formatTime(sessionData.trackingData.activeTime + sessionData.trackingData.idleTime)}. \n
+      stopTimer();
+      vscode.window.showInformationMessage(`Total time spent: ${formatTime(sessionData.trackingData.activeTime + sessionData.trackingData.idleTime)}. \n
 										  Key presses: ${sessionData.trackingData.numKeyPresses}. \n
-                                          Undos: ${sessionData.trackingData.undoCt}. \n
+                                          Undos: ${sessionData.trackingData.undoCt}. \n Pastes: ${sessionData.trackingData.pasteCount}.\n
 										  Thanks for using CodeClock!`);
-        deactivate();
+      deactivate();
     } else {
-        vscode.window.showInformationMessage(`There is no CodeClock timer running.`);
+      vscode.window.showInformationMessage(`There is no CodeClock timer running.`);
     }
   });
   context.subscriptions.push(endTimeCommand);
 }
 
 function deactivate() {
-  //timerInitialized = false;
-  sessionData.trackingData.keystrokeCt =  0;
-    sessionData.trackingData.undoCt = 0;
-    sessionData.trackingData.numKeyPresses = 0;
-    
-    // idle and active time are in milliseconds
-    sessionData.trackingData.idleTime = 0;
-    sessionData.trackingData.activeTime = 0;
-    totalTime = 0;
-    doOver = true;
-    startTime = null;
+
+  sessionData.trackingData.keystrokeCt = 0;
+  sessionData.trackingData.undoCt = 0;
+  sessionData.trackingData.numKeyPresses = 0;
+
+  // idle and active time are in milliseconds
+  sessionData.trackingData.idleTime = 0;
+  sessionData.trackingData.activeTime = 0;
+  totalTime = 0;
+  doOver = true;
+  startTime = null;
 }
 
 module.exports = {
