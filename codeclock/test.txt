@@ -1,0 +1,319 @@
+/* 
+ * extension.js
+ * Made by: Peter Morganelli and Brendan Roy with help from ChatGPT
+ * 2/22/25
+ * Purpose: Define the functionality for a VSCode extension called CodeClock
+ *          for the JumboHack 2025 Hackathon. Upon entering "Start CodeClock Timer"
+ *          the activeTime will measure how much time is spent actively coding
+ *          and the idleTime will measure how much time is spent idle. These
+ *          times are then sent to our backend server to be used on our frontend
+ *          for the purposes of a leaderboard.
+ */
+
+const vscode = require('vscode');
+const path = require('path');
+
+function file(filename) {
+  this.name = filename;
+
+  this.undoCt = null;
+  this.numKeyPresses = null;
+  this.pasteCount = null;
+
+  // idle and active time are in milliseconds
+  this.idleTime = 0;
+  this.activeTime = 0;
+  this.startTime = Date.now();
+  this.totalTime = 0;
+}
+let lastRecordedTime = Date.now();
+
+let offCodeTime = 0;
+
+let timerInitialized = false;
+
+let email = "";
+let doOver = true;
+// let sessionData = {
+let fileData = []; // time spent in each file in minutes
+let currFile = null;
+// currFile: {
+//   undoCt: 0,
+//   numKeyPresses: 0,
+//   pasteCount: 0,
+
+//   // idle and active time are in milliseconds
+//   idleTime: 0,
+//   activeTime: 0,
+//   offCodeTime: 0
+// }
+// };
+// Off vscode time that still counts toward idle time (maximum is 20 minutes)
+const maxOffCode = 120000
+// Idle threshold in milliseconds (idle time here is 1 minute)
+const idleThreshold = 60000;
+
+
+function startTimer() {
+  if (offCodeTime) {
+    let timeOff = Date.now() - offCodeTime;
+    console.log(TIMEOFF: ${timeOff});
+    currFile.idleTime += (timeOff > maxOffCode) ? maxOffCode : timeOff;
+    offCodeTime = 0;
+  }
+
+  if (!currFile.startTime) {
+    currFile.startTime = Date.now();
+  }
+  lastRecordedTime = currFile.startTime;
+  console.log(startRecord time = ${lastRecordedTime});
+}
+function startOffCodeTimer() {
+  offCodeTime = Date.now();
+
+}
+function stopTimer() {
+  if (currFile.startTime) {
+    currFile.totalTime += Date.now() - currFile.startTime;
+    currFile.startTime = null;
+  }
+}
+
+function formatTime(milliseconds) {
+  const seconds = Math.floor(milliseconds / 1000);
+  const mins = Math.floor(seconds / 60) % 60;
+  const hours = Math.floor(Math.floor(seconds / 60) / 60);
+  return ${hours} hours ${mins} mins ${seconds % 60} seconds;
+}
+
+function recordActivity() {
+
+  const currTime = Date.now();
+  const delta = currTime - lastRecordedTime;
+  console.log(LASTRECORDEDTIMEVARIABLE: ${lastRecordedTime});
+  if (delta > idleThreshold) {
+    currFile.idleTime += (delta - idleThreshold);
+    currFile.activeTime += idleThreshold;
+    console.log(Recorded idle time: ${delta} ms);
+  } else {
+    currFile.activeTime += delta;
+    console.log(Recorded active time: ${delta} ms);
+  }
+  lastRecordedTime = currTime;
+}
+
+/**
+ * @param {vscode.ExtensionContext} context
+ */
+function activate(context) {
+  const config = vscode.workspace.getConfiguration("CodeClock");
+  const email = config.get('email');
+
+  vscode.window.onDidChangeActiveTextEditor((editor) => {
+    if (editor) {
+      // Get the full file path
+      let filePath = editor.document.fileName;
+      // Optionally, extract just the file name
+      let fileName = path.basename(filePath);
+
+      for (let file of fileData) {
+        if (file.name = fileName) {
+          currFile = file;
+        } else if (file === fileData[fileData.length - 1]) {
+          fileData.push(file(fileName));
+          currFile = fileData[fileData.length - 1];
+        }
+      }
+      vscode.window.showInformationMessage(Current file: ${fileName});
+    }
+  });
+
+
+  vscode.window.showInputBox({
+    prompt: "Enter your email address; data will not be recorded without a valid email",
+    validateInput: (value) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(value) ? null : "Please enter a valid email address";
+    }
+  }).then((value) => {
+    if (value) {
+      let email = value;
+      console.log(yo check out the email: ${email});
+    }
+  })
+
+  // Command to initialize CodeClock and start the timer.
+  let codeClockCommand = vscode.commands.registerCommand('CodeClock', () => {
+    if (!timerInitialized || !doOver) {
+
+      fileData.push(path.basename(vscode.window.activeTextEditor.document.fileName));
+      currFile = fileData[0];
+      doOver = false;
+      // Listen for window focus changes.
+      context.subscriptions.push(
+        vscode.window.onDidChangeWindowState((state) => {
+          if (state.focused) {
+            startTimer();
+            lastRecordedTime = Date.now();
+            recordActivity();
+          } else {
+            console.log(WE HAVE STARTED);
+            startOffCodeTimer();
+          }
+        })
+      );
+
+      // Listen for text document changes.
+      context.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument(() => {
+          recordActivity();
+          lastRecordedTime = Date.now();
+          if (!currFile.startTime && vscode.window.state.focused) {
+            startTimer();
+          }
+        })
+      );
+
+      // Listen for selection changes (e.g., moving the cursor).
+      context.subscriptions.push(
+        vscode.window.onDidChangeTextEditorSelection(() => {
+          recordActivity();
+          lastRecordedTime = Date.now();
+          if (!currFile.startTime && vscode.window.state.focused) {
+            startTimer();
+          }
+        })
+      );
+
+      // Listen for visible range changes (e.g., scrolling).
+      context.subscriptions.push(
+        vscode.window.onDidChangeTextEditorVisibleRanges(() => {
+          recordActivity();
+          lastRecordedTime = Date.now();
+          if (!currFile.startTime && vscode.window.state.focused) {
+            startTimer();
+          }
+        })
+      );
+
+      /***********************************************************************/
+      /*                       COUNTING USER DATA                            */
+      /***********************************************************************/
+      //Measure how many key presses the user does
+      context.subscriptions.push(
+        vscode.commands.registerCommand('type', async (args) => {
+          if (args.text === '\u0016') { // Detect CTRL+V (Unix-style keycode)
+            currFile.pasteCount++;
+          }
+          // Increment your keystroke counter
+          currFile.numKeyPresses++;
+
+          // Forward the key event to the default type command so that text is still inserted
+          await vscode.commands.executeCommand('default:type', args);
+        })
+      );
+      // context.subscriptions.push(disposable);
+      //count number of undos
+      context.subscriptions.push(
+        vscode.commands.registerCommand('undo', async () => {
+          currFile.undoCt++;
+          await vscode.commands.executeCommand('default:undo');
+        })
+      );
+
+      context.subscriptions.push(
+        vscode.commands.registerCommand('extension.trackPaste', async () => {
+
+          // context.globalState.update('pasteCount', currFile.pasteCount);
+          // Execute the real paste command
+          await vscode.commands.executeCommand('editor.action.clipboardPasteAction');
+        })
+      );
+
+      // Bind our tracking commands to the real ones
+      context.subscriptions.push(
+        vscode.commands.registerCommand('default:editor.action.clipboardPasteAction', () => {
+          currFile.pasteCount = 100;
+          console.log(Pastecount: ${currFile.pasteCount});
+          vscode.commands.executeCommand('extension.trackCopy');
+        })
+      );
+
+
+      //check for idle detection which triggers after a minute of no behavior
+      const idleCheckInterval = setInterval(() => {
+        if (currFile.startTime && (Date.now() - lastRecordedTime > idleThreshold)) {
+          stopTimer();
+          vscode.window.setStatusBarMessage("Idle: Timer paused", 60000);
+        }
+      }, 5000);
+      context.subscriptions.push({ dispose: () => clearInterval(idleCheckInterval) });
+
+      timerInitialized = true;
+      //print message when timer starts
+      vscode.window.showInformationMessage("CodeClock timer started!");
+    } else {
+      //if timer is already started, print a different message
+      if (!doOver) {
+        vscode.window.showInformationMessage("CodeClock timer is already running.");
+      } else {
+        startTimer();
+        doOver = false;
+        vscode.window.showInformationMessage("CodeClock timer started!");
+      }
+
+    }
+  });
+  context.subscriptions.push(codeClockCommand);
+
+  // Command to show the tracked active time.
+  let showTimeCommand = vscode.commands.registerCommand('extension.showTime', () => {
+    if (!doOver) {
+      recordActivity();
+      // stopTimer();
+      vscode.window.showInformationMessage(Active: ${formatTime(currFile.activeTime)}. \n
+          								  Idle: ${formatTime(currFile.idleTime)}. \n
+      									  Total: ${formatTime(currFile.activeTime + currFile.idleTime)});
+    } else {
+      vscode.window.showInformationMessage(There is no CodeClock timer running.);
+    }
+  });
+  context.subscriptions.push(showTimeCommand);
+
+
+  // Create an output channel (usually at the top of your activate function)
+  const outputChannel = vscode.window.createOutputChannel("CodeClock");
+
+  let endTimeCommand = vscode.commands.registerCommand('extension.finishTime', () => {
+    if (!doOver) {
+      stopTimer();
+      vscode.window.showInformationMessage(Total time spent: ${formatTime(currFile.activeTime + currFile.idleTime)}. \n
+										  Key presses: ${currFile.numKeyPresses}. \n
+                                          Undos: ${currFile.undoCt}. \n Pastes: ${currFile.pasteCount}.\n
+										  Thanks for using CodeClock!);
+      deactivate();
+    } else {
+      vscode.window.showInformationMessage(There is no CodeClock timer running.);
+    }
+  });
+  context.subscriptions.push(endTimeCommand);
+}
+
+function deactivate() {
+
+
+  currFile.undoCt = 0;
+  currFile.numKeyPresses = 0;
+
+  // idle and active time are in milliseconds
+  currFile.idleTime = 0;
+  currFile.activeTime = 0;
+  currFile.totalTime = 0;
+  doOver = true;
+  currFile.startTime = null;
+}
+
+module.exports = {
+  activate,
+  deactivate
+};
