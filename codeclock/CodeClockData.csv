@@ -1,4 +1,3 @@
-File Name, Active Time (ms), Idle Time (ms), Total Time (ms)
-out.txt,12261,34886,47147
-out.pgm,3856,8010,11866
-Totals: ,16117,42896,59013
+File Name, Active Time (ms), Idle Time (ms), Total Time (ms), Copy, Cut, Paste, Undo
+out.txt,36047,10542,46589, 2, 1, 5, 11
+Totals: ,36047,10542,46589, 2, 1, 5, 11

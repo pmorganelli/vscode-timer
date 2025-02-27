@@ -31,6 +31,38 @@
         "title": "Paste and Count"
       }
     ],
+    "keybindings": [
+        {
+          "command": "extension.trackPaste",
+          "key": "ctrl+v",
+          "when": "editorTextFocus"
+        },
+        {
+            "command": "extension.trackPaste",
+            "key": "cmd+v",
+            "when": "editorTextFocus"
+        },
+        {
+            "command": "extension.trackCopy",
+            "key": "ctrl+c",
+            "when": "editorTextFocus"
+          },
+          {
+            "command": "extension.trackCopy",
+            "key": "cmd+c",
+            "when": "editorTextFocus"
+          },
+          {
+            "command": "extension.trackCut",
+            "key": "ctrl+x",
+            "when": "editorTextFocus"
+          },
+          {
+            "command": "extension.trackCut",
+            "key": "cmd+x",
+            "when": "editorTextFocus"
+          }
+      ],
     "configuration":{
                 "title": "CodeClock Setting",
                 "properties": {
