@@ -1,5 +1,4 @@
-<!-- ================================================================================
-<CodeClock>
+CodeClock
 ================================================================================
 Created by: <Lewis 216> (<Peter Morganelli, Harry Lynch, Harrison Tun, Nathan Lee, Jonah Pflaster, and Brendan Roy>)
 Presented at JumboHack 2025 under the <Education> track.
@@ -7,15 +6,15 @@ Presented at JumboHack 2025 under the <Education> track.
 <Two to three sentences describing your project. It is a super cool project that
 does some fun things.>
 
-<Are you a Tufts CS student? Are you sick and tired of keeping track of how long you spend on
+Are you a Tufts CS student? Are you sick and tired of keeping track of how long you spend on
 CS40, CS15, or any other programming courses? Meet CodeClock, a smart and seamless way to keep track
 of your time spent, and a fun way to compare your time programming with your friends. Using our VSCode Extension, you can effortlessly start a timer when you begin a project and stop the timer when you put in a submission. We take care of the rest for you. After inputting an email, your data gets sent to our database
-where we neatly organize a leaderboard with all your statistics. >
+where we neatly organize a leaderboard with all your statistics. 
 
 Team Member Contributions:
     <Harry Lynch>: <Entirety of backend logic and database storage>
-    <Peter Morganelli>: <Majority of VSCode Extension logic and dev testing>
-    <Brendan Roy>: <Wrapped up Extension and testing with email address behavior>
+    <Peter Morganelli>: <VSCode Extension logic and dev testing>
+    <Brendan Roy>: <Expanded Extension functionality and testing with email address behavior>
     <Nathan Lee>: <Profile page and general frontend behavior>
     <Harrison Tun>: <Welcome page, leaderboard page, session logs page, general frontend behavior>
     <Jonah Pflaster>: <Idea for the project, enviornment, and logs>
